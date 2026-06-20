@@ -19,10 +19,18 @@ Do not write the final `problem-definition.md` until script validation proves ev
 
 ## Workflow
 
+Resolve the installed skill directory before running scripts:
+
+```bash
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/community-painpoint-analysis"
+```
+
+Use a fresh analysis run directory unless the user explicitly confirms reuse. `prepare_dataset.py` writes or replaces `source_manifest.json` and `audit-report.md`, and recreates `chunks/` on successful runs.
+
 1. Run dataset preparation:
 
 ```bash
-python3 skills/community-painpoint-analysis/scripts/prepare_dataset.py \
+python3 "$SKILL_DIR/scripts/prepare_dataset.py" \
   --topic "<topic>" \
   --output-dir "analysis-runs/YYYY-MM-DD-topic" \
   --chunk-size 100 \
@@ -42,7 +50,7 @@ record_id,is_relevant,irrelevant_reason,user_context,journey_stage,jtbd,primary_
 5. Validate labels:
 
 ```bash
-python3 skills/community-painpoint-analysis/scripts/validate_labels.py \
+python3 "$SKILL_DIR/scripts/validate_labels.py" \
   analysis-runs/YYYY-MM-DD-topic/source_manifest.json \
   analysis-runs/YYYY-MM-DD-topic/labels/*.csv
 ```
@@ -52,7 +60,7 @@ python3 skills/community-painpoint-analysis/scripts/validate_labels.py \
 7. Merge labels:
 
 ```bash
-python3 skills/community-painpoint-analysis/scripts/merge_labels.py \
+python3 "$SKILL_DIR/scripts/merge_labels.py" \
   analysis-runs/YYYY-MM-DD-topic/source_manifest.json \
   analysis-runs/YYYY-MM-DD-topic/labeled_posts.csv \
   analysis-runs/YYYY-MM-DD-topic/labels/*.csv
@@ -61,10 +69,12 @@ python3 skills/community-painpoint-analysis/scripts/merge_labels.py \
 8. Summarize labels:
 
 ```bash
-python3 skills/community-painpoint-analysis/scripts/summarize_labels.py \
+python3 "$SKILL_DIR/scripts/summarize_labels.py" \
   analysis-runs/YYYY-MM-DD-topic/labeled_posts.csv \
   analysis-runs/YYYY-MM-DD-topic/label_summary.json
 ```
+
+Merge and summarize reject input/output path collisions, and output files may be overwritten if paths are reused. Keep outputs as the standard separate paths: `labeled_posts.csv` and `label_summary.json`.
 
 9. Reconcile taxonomy drift using the merged labels. Preserve raw labels in `labeled_posts.csv`; document normalized clusters in the final Markdown.
 

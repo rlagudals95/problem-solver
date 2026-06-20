@@ -4,6 +4,8 @@ Use this reference before writing `codebook.md` for an analysis run.
 
 ## Required Columns
 
+The label CSV header must match these exact column names and order, with no extra, missing, or duplicate columns.
+
 - `record_id`: Stable row-level ID from chunk CSV.
 - `is_relevant`: `true` when the row contains meaningful user evidence for the topic, otherwise `false`.
 - `irrelevant_reason`: Required when `is_relevant=false`.
