@@ -1,0 +1,6 @@
+site,post_id,board_code,board_name,category_name,title,author,posted_at,url,view_count,like_count,dislike_count,comment_count,matched_queries,matched_search_urls,search_pages,search_excerpt,body_text,comments_text,comments_json,crawl_status,crawl_error
+clien,1001,board-a,생활,,정수기 렌탈 가격이 너무 헷갈립니다,user-a,2026-06-01,https://example.com/a,120,3,0,2,정수기 렌탈,https://search.example/a,1,월 요금이 다 다르게 보여요,월 요금과 사은품 조건이 업체마다 달라서 비교가 어렵습니다.,저도 위약금 때문에 고민입니다.,"[]",ok,
+clien,1002,board-a,생활,,설치 공간 때문에 렌탈이 망설여져요,user-b,2026-06-02,https://example.com/b,98,1,0,1,정수기 렌탈,https://search.example/a,1,싱크대 공간이 부족해요,집 구조상 설치가 가능한지 모르겠고 상담마다 말이 다릅니다.,설치 전에 확인해야 합니다.,"[]",ok,
+fmkorea,2001,home,자유,,렌탈 광고 링크 모음,user-c,2026-06-03,https://example.com/c,500,0,0,0,정수기 렌탈,https://search.example/b,1,특가 링크,제휴 링크 모음입니다.,,"[]",ok,
+fmkorea,2002,home,자유,,본문 없는 실패 글,user-d,2026-06-04,https://example.com/d,0,0,0,0,정수기 렌탈,https://search.example/b,1,,,,[],detail_failed,blocked
+clien,1001,board-a,생활,,정수기 렌탈 가격이 너무 헷갈립니다,user-a,2026-06-01,https://example.com/a,120,3,0,2,정수기 렌탈,https://search.example/a,1,월 요금이 다 다르게 보여요,월 요금과 사은품 조건이 업체마다 달라서 비교가 어렵습니다.,저도 위약금 때문에 고민입니다.,"[]",ok,

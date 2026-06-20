@@ -1,0 +1,2 @@
+site,post_id,board_code,board_name,category_name,title,author,posted_at,url,view_count,like_count,dislike_count,comment_count,matched_queries,matched_search_urls,search_pages,search_excerpt,body_text,comments_text,comments_json,crawl_status,crawl_error
+arca,3001,breaking,종합 속보,,관리 방문이 불편합니다,user-e,2026-06-05,https://example.com/e,80,4,0,3,정수기 렌탈,https://search.example/c,1,관리 기사 일정 맞추기가 어렵습니다,방문 관리 일정이 매번 애매해서 연차를 써야 할 때가 있습니다.,예약 시간 폭이 너무 넓어요.,"[]",ok,
