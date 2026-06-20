@@ -16,14 +16,30 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def ensure_output_does_not_clobber_inputs(
+    manifest_path: Path,
+    output_path: Path,
+    label_paths: list[Path],
+) -> None:
+    resolved_output = output_path.resolve()
+    if resolved_output == manifest_path.resolve():
+        raise ValueError("output path must not match the manifest path")
+    for label_path in label_paths:
+        if resolved_output == label_path.resolve():
+            raise ValueError(f"output path must not match a label input path: {label_path}")
+
+
 def merge(manifest_path: Path, output_path: Path, label_paths: list[Path]) -> None:
+    ensure_output_does_not_clobber_inputs(manifest_path, output_path, label_paths)
+
     errors = validate(manifest_path, label_paths)
     if errors:
         raise ValueError("\n".join(errors))
 
     manifest = read_json(manifest_path)
     included_records = [record for record in manifest["records"] if record["included"]]
-    records_by_id = {record["record_id"]: record for record in included_records}
+    included_record_ids = [record["record_id"] for record in included_records]
+    included_record_id_set = set(included_record_ids)
     labels_by_id: dict[str, dict[str, str]] = {}
 
     for label_path in label_paths:
@@ -32,7 +48,21 @@ def merge(manifest_path: Path, output_path: Path, label_paths: list[Path]) -> No
         if missing:
             raise ValueError(f"{label_path}: missing required columns: {', '.join(missing)}")
         for row in rows:
-            labels_by_id[row["record_id"]] = row
+            record_id = row.get("record_id", "")
+            if record_id in labels_by_id:
+                raise ValueError(f"{label_path}: duplicate record_id {record_id}")
+            labels_by_id[record_id] = row
+
+    label_id_set = set(labels_by_id)
+    missing_label_ids = sorted(included_record_id_set - label_id_set)
+    unexpected_label_ids = sorted(label_id_set - included_record_id_set)
+    id_errors = []
+    if missing_label_ids:
+        id_errors.append("missing label rows: " + ", ".join(missing_label_ids))
+    if unexpected_label_ids:
+        id_errors.append("unexpected label rows: " + ", ".join(unexpected_label_ids))
+    if id_errors:
+        raise ValueError("\n".join(id_errors))
 
     merged_rows: list[dict[str, str]] = []
     for record in included_records:

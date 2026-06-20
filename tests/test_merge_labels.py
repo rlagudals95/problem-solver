@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import csv
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from tests.helpers import FIXTURES_DIR, read_csv_rows, read_json, run_script
+from tests.helpers import FIXTURES_DIR, SCRIPTS_DIR, read_csv_rows, read_json, run_script
+
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from common import MERGED_COLUMNS
+from merge_labels import merge
 
 
 def write_labels(path: Path, record_ids: list[str]) -> None:
@@ -50,38 +58,98 @@ def write_labels(path: Path, record_ids: list[str]) -> None:
             )
 
 
+def read_csv_header(path: Path) -> list[str]:
+    with path.open("r", encoding="utf-8", newline="") as file:
+        return next(csv.reader(file))
+
+
+def prepare_labels(output_dir: Path) -> tuple[Path, Path, list[str]]:
+    prepare = run_script(
+        "prepare_dataset.py",
+        "--topic",
+        "rental",
+        "--output-dir",
+        str(output_dir),
+        "--chunk-size",
+        "2",
+        str(FIXTURES_DIR / "community_posts.csv"),
+    )
+    if prepare.returncode != 0:
+        raise AssertionError(prepare.stderr)
+    manifest_path = output_dir / "source_manifest.json"
+    manifest = read_json(manifest_path)
+    included_ids = [record["record_id"] for record in manifest["records"] if record["included"]]
+    labels_path = output_dir / "labels" / "all.csv"
+    write_labels(labels_path, list(reversed(included_ids)))
+    return manifest_path, labels_path, included_ids
+
+
 class MergeLabelsTests(unittest.TestCase):
     def test_merge_labels_preserves_manifest_order_and_source_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"
-            prepare = run_script(
-                "prepare_dataset.py",
-                "--topic",
-                "rental",
-                "--output-dir",
-                str(output_dir),
-                "--chunk-size",
-                "2",
-                str(FIXTURES_DIR / "community_posts.csv"),
-            )
-            self.assertEqual(prepare.returncode, 0, prepare.stderr)
-            manifest = read_json(output_dir / "source_manifest.json")
-            included_ids = [record["record_id"] for record in manifest["records"] if record["included"]]
-            labels = output_dir / "labels" / "all.csv"
-            write_labels(labels, list(reversed(included_ids)))
+            manifest_path, labels_path, included_ids = prepare_labels(output_dir)
 
             result = run_script(
                 "merge_labels.py",
-                str(output_dir / "source_manifest.json"),
+                str(manifest_path),
                 str(output_dir / "labeled_posts.csv"),
-                str(labels),
+                str(labels_path),
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(read_csv_header(output_dir / "labeled_posts.csv"), MERGED_COLUMNS)
             rows = read_csv_rows(output_dir / "labeled_posts.csv")
             self.assertEqual([row["record_id"] for row in rows], included_ids)
             self.assertEqual(rows[0]["site"], "clien")
             self.assertEqual(rows[0]["url"], "https://example.com/a")
+
+    def test_merge_labels_rejects_output_path_matching_label_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            manifest_path, labels_path, _included_ids = prepare_labels(output_dir)
+            original_labels = labels_path.read_text(encoding="utf-8")
+
+            result = run_script(
+                "merge_labels.py",
+                str(manifest_path),
+                str(labels_path),
+                str(labels_path),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("output path", result.stderr)
+            self.assertEqual(labels_path.read_text(encoding="utf-8"), original_labels)
+
+    def test_merge_labels_rejects_output_path_matching_manifest_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            manifest_path, labels_path, _included_ids = prepare_labels(output_dir)
+            original_manifest = manifest_path.read_text(encoding="utf-8")
+
+            result = run_script(
+                "merge_labels.py",
+                str(manifest_path),
+                str(manifest_path),
+                str(labels_path),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("output path", result.stderr)
+            self.assertEqual(manifest_path.read_text(encoding="utf-8"), original_manifest)
+
+    def test_merge_labels_defensively_rejects_duplicate_labels_without_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            manifest_path, labels_path, included_ids = prepare_labels(output_dir)
+            write_labels(labels_path, [*included_ids, included_ids[0]])
+            output_path = output_dir / "labeled_posts.csv"
+
+            with patch("merge_labels.validate", return_value=[]):
+                with self.assertRaisesRegex(ValueError, "duplicate record_id"):
+                    merge(manifest_path, output_path, [labels_path])
+
+            self.assertFalse(output_path.exists())
 
 
 if __name__ == "__main__":
