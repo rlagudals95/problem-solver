@@ -5,7 +5,14 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from common import MERGED_COLUMNS, parse_bool, read_csv, write_json
+from common import (
+    IRRELEVANT_REASON_VALUES,
+    MERGED_COLUMNS,
+    SENTIMENT_VALUES,
+    parse_bool,
+    read_csv,
+    write_json,
+)
 
 SEVERITY_SCORE = {"낮음": 1, "중간": 2, "높음": 3}
 CONFIDENCE_SCORE = {"낮음": 1, "중간": 2, "높음": 3}
@@ -44,6 +51,19 @@ def require_bool(labeled_posts: Path, line_number: int, row: dict[str, str], col
     return parsed
 
 
+def validate_enum(
+    errors: list[str],
+    labeled_posts: Path,
+    line_number: int,
+    row: dict[str, str],
+    column: str,
+    allowed_values: set[str],
+) -> None:
+    value = row.get(column, "").strip()
+    if value and value not in allowed_values:
+        errors.append(f"{labeled_posts}: line {line_number}: unknown {column}: {value}")
+
+
 def validate_rows(
     labeled_posts: Path,
     rows: list[dict[str, str]],
@@ -69,10 +89,12 @@ def validate_rows(
             confidence = row.get("confidence", "")
             if confidence and confidence not in CONFIDENCE_SCORE:
                 errors.append(f"{labeled_posts}: line {line_number}: unknown confidence: {confidence}")
+            validate_enum(errors, labeled_posts, line_number, row, "sentiment", SENTIMENT_VALUES)
             relevant_rows.append(row)
         else:
             if not row.get("irrelevant_reason", "").strip():
                 errors.append(f"{labeled_posts}: line {line_number}: irrelevant_reason is required")
+            validate_enum(errors, labeled_posts, line_number, row, "irrelevant_reason", IRRELEVANT_REASON_VALUES)
             irrelevant_rows.append(row)
 
     if errors:

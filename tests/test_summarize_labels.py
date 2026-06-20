@@ -169,6 +169,17 @@ class SummarizeLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unknown confidence", result.stderr)
 
+    def test_summarize_labels_rejects_unknown_relevant_sentiment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(labeled, [labeled_row("rec_a", sentiment="화남")])
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown sentiment", result.stderr)
+
     def test_summarize_labels_rejects_irrelevant_row_missing_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             run_dir = Path(temp_dir)
@@ -193,6 +204,30 @@ class SummarizeLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("irrelevant_reason is required", result.stderr)
 
+    def test_summarize_labels_rejects_unknown_irrelevant_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(
+                labeled,
+                [
+                    labeled_row(
+                        "rec_a",
+                        is_relevant="false",
+                        irrelevant_reason="기타",
+                        primary_pain_point="",
+                        severity="",
+                        evidence_quote="",
+                        confidence="",
+                    ),
+                ],
+            )
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown irrelevant_reason", result.stderr)
+
     def test_summarize_labels_includes_needs_review_record_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             run_dir = Path(temp_dir)
@@ -204,7 +239,7 @@ class SummarizeLabelsTests(unittest.TestCase):
                     labeled_row(
                         "rec_b",
                         is_relevant="false",
-                        irrelevant_reason="not_problem_discussion",
+                        irrelevant_reason="generic_chatter",
                         primary_pain_point="",
                         severity="",
                         evidence_quote="",

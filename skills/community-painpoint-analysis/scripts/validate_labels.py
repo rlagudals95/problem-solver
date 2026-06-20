@@ -5,7 +5,17 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from common import LABEL_COLUMNS, normalize_space, parse_bool, read_csv, read_json
+from common import (
+    CONFIDENCE_VALUES,
+    IRRELEVANT_REASON_VALUES,
+    LABEL_COLUMNS,
+    SENTIMENT_VALUES,
+    SEVERITY_VALUES,
+    normalize_space,
+    parse_bool,
+    read_csv,
+    read_json,
+)
 
 RELEVANT_REQUIRED_COLUMNS = [
     "jtbd",
@@ -40,6 +50,18 @@ def validate_label_header(label_path: Path, header: list[str]) -> list[str]:
     if not errors and header != LABEL_COLUMNS:
         errors.append(f"{label_path}: label columns must match expected order")
     return errors
+
+
+def validate_enum(
+    errors: list[str],
+    location: str,
+    row: dict[str, str],
+    column: str,
+    allowed_values: set[str],
+) -> None:
+    value = normalize_space(row.get(column, ""))
+    if value and value not in allowed_values:
+        errors.append(f"{location}: unknown {column}: {value}")
 
 
 def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
@@ -90,12 +112,20 @@ def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
             if is_relevant is None:
                 errors.append(f"{location}: is_relevant must be true or false")
                 continue
+            needs_review = parse_bool(row.get("needs_review", ""))
+            if needs_review is None:
+                errors.append(f"{location}: needs_review must be true or false")
             if is_relevant:
                 for column in RELEVANT_REQUIRED_COLUMNS:
                     if not normalize_space(row.get(column, "")):
                         errors.append(f"{location}: {column} is required for relevant rows")
+                validate_enum(errors, location, row, "sentiment", SENTIMENT_VALUES)
+                validate_enum(errors, location, row, "severity", SEVERITY_VALUES)
+                validate_enum(errors, location, row, "confidence", CONFIDENCE_VALUES)
             elif not normalize_space(row.get("irrelevant_reason", "")):
                 errors.append(f"{location}: irrelevant_reason is required for irrelevant rows")
+            else:
+                validate_enum(errors, location, row, "irrelevant_reason", IRRELEVANT_REASON_VALUES)
 
     missing_ids = sorted(included_ids - set(seen))
     if missing_ids:

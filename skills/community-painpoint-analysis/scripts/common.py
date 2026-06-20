@@ -56,6 +56,17 @@ LABEL_COLUMNS = [
     "needs_review",
 ]
 
+SENTIMENT_VALUES = {"부정", "중립", "긍정", "혼합"}
+SEVERITY_VALUES = {"낮음", "중간", "높음"}
+CONFIDENCE_VALUES = {"낮음", "중간", "높음"}
+IRRELEVANT_REASON_VALUES = {
+    "promotional_or_deal",
+    "news_or_investor",
+    "generic_chatter",
+    "non_consumer_context",
+    "insufficient_signal",
+}
+
 MERGED_COLUMNS = [
     "record_id",
     "source_file",

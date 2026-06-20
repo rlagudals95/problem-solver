@@ -206,6 +206,58 @@ class ValidateLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("evidence_quote is required for relevant rows", result.stderr)
 
+    def test_validate_labels_fails_when_needs_review_is_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["needs_review"] = "maybe"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("needs_review must be true or false", result.stderr)
+
+    def test_validate_labels_fails_when_relevant_sentiment_is_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["sentiment"] = "화남"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown sentiment: 화남", result.stderr)
+
+    def test_validate_labels_fails_when_relevant_severity_is_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["severity"] = "심각"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown severity: 심각", result.stderr)
+
+    def test_validate_labels_fails_when_relevant_confidence_is_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["confidence"] = "확실"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown confidence: 확실", result.stderr)
+
     def test_validate_labels_fails_when_irrelevant_row_is_missing_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir, included_ids = self.prepare_run(temp_dir)
@@ -219,6 +271,20 @@ class ValidateLabelsTests(unittest.TestCase):
 
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("irrelevant_reason is required for irrelevant rows", result.stderr)
+
+    def test_validate_labels_fails_when_irrelevant_reason_is_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["is_relevant"] = "false"
+            rows[0]["irrelevant_reason"] = "기타"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown irrelevant_reason: 기타", result.stderr)
 
 
 if __name__ == "__main__":
