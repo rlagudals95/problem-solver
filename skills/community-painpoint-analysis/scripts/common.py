@@ -119,9 +119,17 @@ def content_fingerprint(row: dict[str, str]) -> str:
 def stable_key(row: dict[str, str], source_file: Path, source_row_number: int) -> str:
     site = normalize_space(row.get("site", ""))
     post_id = normalize_space(row.get("post_id", ""))
+    board_code = normalize_space(row.get("board_code", ""))
     url = normalize_space(row.get("url", ""))
     if site and post_id:
-        return f"{site}:{post_id}"
+        parts = [site]
+        if board_code:
+            parts.append(board_code)
+        parts.append(post_id)
+        key = ":".join(parts)
+        if url:
+            return f"{key}:url:{url}"
+        return key
     if url:
         return f"url:{url}"
     return f"source:{source_file.as_posix()}:{source_row_number}"

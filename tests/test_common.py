@@ -36,6 +36,31 @@ class CommonHelperTests(unittest.TestCase):
 
         self.assertNotEqual(first, second)
 
+    def test_stable_key_includes_board_code_and_url(self) -> None:
+        row = {
+            "site": "clien",
+            "post_id": "1001",
+            "board_code": "board-a",
+            "url": "https://example.com/a",
+        }
+
+        key = stable_key(row, Path("posts.csv"), 2)
+
+        self.assertEqual(key, "clien:board-a:1001:url:https://example.com/a")
+
+    def test_stable_key_distinguishes_same_post_id_across_boards_and_urls(self) -> None:
+        base_row = {
+            "site": "community",
+            "post_id": "1001",
+            "board_code": "board-a",
+            "url": "https://example.com/a",
+        }
+        other_board = {**base_row, "board_code": "board-b"}
+        other_url = {**base_row, "url": "https://example.com/b"}
+
+        self.assertNotEqual(stable_key(base_row, Path("posts.csv"), 2), stable_key(other_board, Path("posts.csv"), 3))
+        self.assertNotEqual(stable_key(base_row, Path("posts.csv"), 2), stable_key(other_url, Path("posts.csv"), 4))
+
 
 if __name__ == "__main__":
     unittest.main()

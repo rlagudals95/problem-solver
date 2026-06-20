@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from common import (
@@ -18,6 +19,8 @@ from common import (
     write_csv,
     write_json,
 )
+
+DETAIL_TEXT_COLUMNS = ["search_excerpt", "body_text", "comments_text"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,9 +50,12 @@ def audit_markdown(manifest: dict) -> str:
     )
 
 
-def has_analyzable_content(row: dict[str, str]) -> bool:
-    content_row = {**row, "title": ""}
-    return has_meaningful_text(content_row)
+def has_detail_text(row: dict[str, str]) -> bool:
+    return any(normalize_space(row.get(column, "")) for column in DETAIL_TEXT_COLUMNS)
+
+
+def is_unusable_crawl_result(row: dict[str, str]) -> bool:
+    return normalize_space(row.get("crawl_status", "")).lower() != "ok" and not has_detail_text(row)
 
 
 def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chunk_size: int) -> dict:
@@ -58,6 +64,8 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
 
     output_dir.mkdir(parents=True, exist_ok=True)
     chunks_dir = output_dir / "chunks"
+    if chunks_dir.exists():
+        shutil.rmtree(chunks_dir)
     chunks_dir.mkdir(parents=True, exist_ok=True)
 
     records: list[dict] = []
@@ -77,7 +85,8 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
         for zero_index, row in enumerate(rows):
             source_row_number = zero_index + 2
             key = stable_key(row, source_path, source_row_number)
-            record_id = stable_record_id(key)
+            record_identity_key = f"{key}:source:{source_path.as_posix()}:{source_row_number}"
+            record_id = stable_record_id(record_identity_key)
             fingerprint = content_fingerprint(row)
             duplicate_of = seen_keys.get(key, "")
             near_duplicate_of = seen_fingerprints.get(fingerprint, "") if fingerprint else ""
@@ -87,7 +96,10 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
             if duplicate_of:
                 included = False
                 exclusion_reason = f"duplicate_of:{duplicate_of}"
-            elif not has_analyzable_content(row):
+            elif is_unusable_crawl_result(row):
+                included = False
+                exclusion_reason = "unusable_crawl_result"
+            elif not has_meaningful_text(row):
                 included = False
                 exclusion_reason = "empty_content"
             else:
@@ -139,7 +151,7 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
 
     manifest = {
         "topic": topic,
-        "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "source_files": source_summary,
         "summary": {
             "source_rows": len(records),
