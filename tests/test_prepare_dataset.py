@@ -49,6 +49,23 @@ class PrepareDatasetTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("missing required columns", result.stderr)
 
+    def test_prepare_dataset_rejects_duplicate_source_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            source = FIXTURES_DIR / "community_posts.csv"
+            result = run_script(
+                "prepare_dataset.py",
+                "--topic",
+                "rental",
+                "--output-dir",
+                str(output_dir),
+                str(source),
+                str(source),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("duplicate source file", result.stderr)
+
     def test_prepare_dataset_writes_chunks_with_record_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"
@@ -98,6 +115,36 @@ class PrepareDatasetTests(unittest.TestCase):
             self.assertEqual(second_result.returncode, 0, second_result.stderr)
             chunks = sorted((output_dir / "chunks").glob("chunk-*.csv"))
             self.assertEqual([chunk.name for chunk in chunks], ["chunk-001.csv"])
+
+    def test_prepare_dataset_preserves_previous_chunks_when_rerun_fails_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            bad_csv = Path(temp_dir) / "bad.csv"
+            bad_csv.write_text("site,post_id,title\nclien,1,hello\n", encoding="utf-8")
+            first_result = run_script(
+                "prepare_dataset.py",
+                "--topic",
+                "rental",
+                "--output-dir",
+                str(output_dir),
+                "--chunk-size",
+                "1",
+                str(FIXTURES_DIR / "community_posts.csv"),
+            )
+            failed_result = run_script(
+                "prepare_dataset.py",
+                "--topic",
+                "rental",
+                "--output-dir",
+                str(output_dir),
+                str(bad_csv),
+            )
+
+            self.assertEqual(first_result.returncode, 0, first_result.stderr)
+            self.assertNotEqual(failed_result.returncode, 0)
+            self.assertIn("missing required columns", failed_result.stderr)
+            chunks = sorted((output_dir / "chunks").glob("chunk-*.csv"))
+            self.assertEqual([chunk.name for chunk in chunks], ["chunk-001.csv", "chunk-002.csv", "chunk-003.csv"])
 
     def test_prepare_dataset_tracks_excluded_rows(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

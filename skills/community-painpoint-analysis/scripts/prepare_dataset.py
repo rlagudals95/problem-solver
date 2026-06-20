@@ -58,15 +58,20 @@ def is_unusable_crawl_result(row: dict[str, str]) -> bool:
     return normalize_space(row.get("crawl_status", "")).lower() != "ok" and not has_detail_text(row)
 
 
+def reject_duplicate_source_paths(source_paths: list[Path]) -> None:
+    seen_paths: set[Path] = set()
+    for source_path in source_paths:
+        resolved_path = source_path.resolve()
+        if resolved_path in seen_paths:
+            raise ValueError(f"duplicate source file: {source_path}")
+        seen_paths.add(resolved_path)
+
+
 def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chunk_size: int) -> dict:
     if chunk_size < 1:
         raise ValueError("--chunk-size must be at least 1")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    chunks_dir = output_dir / "chunks"
-    if chunks_dir.exists():
-        shutil.rmtree(chunks_dir)
-    chunks_dir.mkdir(parents=True, exist_ok=True)
+    reject_duplicate_source_paths(source_paths)
 
     records: list[dict] = []
     included_rows: list[dict[str, str]] = []
@@ -137,12 +142,12 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
 
             records.append(record)
 
+    chunk_batches: list[tuple[str, list[dict[str, str]]]] = []
     for chunk_offset in range(0, len(included_rows), chunk_size):
         chunk_number = chunk_offset // chunk_size + 1
         chunk_rows = included_rows[chunk_offset : chunk_offset + chunk_size]
         chunk_name = f"chunk-{chunk_number:03d}.csv"
-        chunk_path = chunks_dir / chunk_name
-        write_csv(chunk_path, CHUNK_COLUMNS, chunk_rows)
+        chunk_batches.append((chunk_name, chunk_rows))
         ids_in_chunk = {row["record_id"] for row in chunk_rows}
         for record in records:
             if record["included"] and record["record_id"] in ids_in_chunk:
@@ -161,6 +166,15 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
         },
         "records": records,
     }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    chunks_dir = output_dir / "chunks"
+    if chunks_dir.exists():
+        shutil.rmtree(chunks_dir)
+    chunks_dir.mkdir(parents=True, exist_ok=True)
+
+    for chunk_name, chunk_rows in chunk_batches:
+        write_csv(chunks_dir / chunk_name, CHUNK_COLUMNS, chunk_rows)
 
     write_json(output_dir / "source_manifest.json", manifest)
     (output_dir / "audit-report.md").write_text(audit_markdown(manifest), encoding="utf-8")
