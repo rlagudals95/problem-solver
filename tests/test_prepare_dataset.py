@@ -47,6 +47,48 @@ class PrepareDatasetTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("missing required columns", result.stderr)
 
+    def test_prepare_dataset_writes_chunks_with_record_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            result = run_script(
+                "prepare_dataset.py",
+                "--topic",
+                "rental",
+                "--output-dir",
+                str(output_dir),
+                "--chunk-size",
+                "2",
+                str(FIXTURES_DIR / "community_posts.csv"),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            chunks = sorted((output_dir / "chunks").glob("chunk-*.csv"))
+            self.assertEqual([chunk.name for chunk in chunks], ["chunk-001.csv", "chunk-002.csv"])
+            first_chunk = chunks[0].read_text(encoding="utf-8")
+            self.assertIn("record_id", first_chunk)
+            self.assertIn("정수기 렌탈 가격이 너무 헷갈립니다", first_chunk)
+
+    def test_prepare_dataset_tracks_excluded_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            result = run_script(
+                "prepare_dataset.py",
+                "--topic",
+                "rental",
+                "--output-dir",
+                str(output_dir),
+                str(FIXTURES_DIR / "community_posts.csv"),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = read_json(output_dir / "source_manifest.json")
+            reasons = sorted(record["exclusion_reason"] for record in manifest["records"] if not record["included"])
+            self.assertEqual(reasons, ["duplicate_of:rec_1ddae68e5f48", "empty_content"])
+            audit = (output_dir / "audit-report.md").read_text(encoding="utf-8")
+            self.assertIn("Source rows: 5", audit)
+            self.assertIn("Included rows: 3", audit)
+            self.assertIn("Excluded rows: 2", audit)
+
 
 if __name__ == "__main__":
     unittest.main()
