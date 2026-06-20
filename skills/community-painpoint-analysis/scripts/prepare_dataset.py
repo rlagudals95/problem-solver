@@ -133,7 +133,7 @@ def prepare_dataset(topic: str, source_paths: list[Path], output_dir: Path, chun
         write_csv(chunk_path, CHUNK_COLUMNS, chunk_rows)
         ids_in_chunk = {row["record_id"] for row in chunk_rows}
         for record in records:
-            if record["record_id"] in ids_in_chunk:
+            if record["included"] and record["record_id"] in ids_in_chunk:
                 record["chunk_file"] = f"chunks/{chunk_name}"
                 record["chunk_index"] = chunk_number
 

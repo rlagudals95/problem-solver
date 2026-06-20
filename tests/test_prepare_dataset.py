@@ -82,8 +82,11 @@ class PrepareDatasetTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             manifest = read_json(output_dir / "source_manifest.json")
-            reasons = sorted(record["exclusion_reason"] for record in manifest["records"] if not record["included"])
+            excluded_records = [record for record in manifest["records"] if not record["included"]]
+            reasons = sorted(record["exclusion_reason"] for record in excluded_records)
             self.assertEqual(reasons, ["duplicate_of:rec_1ddae68e5f48", "empty_content"])
+            self.assertTrue(all(record["chunk_file"] == "" for record in excluded_records))
+            self.assertTrue(all(record["chunk_index"] is None for record in excluded_records))
             audit = (output_dir / "audit-report.md").read_text(encoding="utf-8")
             self.assertIn("Source rows: 5", audit)
             self.assertIn("Included rows: 3", audit)
