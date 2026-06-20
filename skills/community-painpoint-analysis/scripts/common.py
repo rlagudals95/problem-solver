@@ -75,7 +75,11 @@ TEXT_COLUMNS = ["title", "search_excerpt", "body_text", "comments_text"]
 def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     with path.open("r", encoding="utf-8", newline="") as file:
         reader = csv.DictReader(file)
-        rows = [{key: value or "" for key, value in row.items()} for row in reader]
+        rows = []
+        for row_number, row in enumerate(reader, start=2):
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError(f"{path}: malformed CSV row at line {row_number}")
+            rows.append({key: value or "" for key, value in row.items()})
         return list(reader.fieldnames or []), rows
 
 
@@ -120,7 +124,7 @@ def stable_key(row: dict[str, str], source_file: Path, source_row_number: int) -
         return f"{site}:{post_id}"
     if url:
         return f"url:{url}"
-    return f"source:{source_file.name}:{source_row_number}"
+    return f"source:{source_file.as_posix()}:{source_row_number}"
 
 
 def stable_record_id(key: str) -> str:
