@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 
-from common import LABEL_COLUMNS, missing_columns, normalize_space, parse_bool, read_csv, read_json
+from common import LABEL_COLUMNS, normalize_space, parse_bool, read_csv, read_json
 
 RELEVANT_REQUIRED_COLUMNS = [
     "jtbd",
@@ -23,6 +24,24 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_label_header(label_path: Path, header: list[str]) -> list[str]:
+    errors: list[str] = []
+    header_counts = Counter(header)
+    duplicates = [column for column, count in header_counts.items() if count > 1]
+    missing = [column for column in LABEL_COLUMNS if header_counts[column] == 0]
+    unexpected = [column for column in header if column not in LABEL_COLUMNS]
+
+    if missing:
+        errors.append(f"{label_path}: missing required columns: {', '.join(missing)}")
+    if unexpected:
+        errors.append(f"{label_path}: unexpected label columns: {', '.join(unexpected)}")
+    if duplicates:
+        errors.append(f"{label_path}: duplicate label columns: {', '.join(duplicates)}")
+    if not errors and header != LABEL_COLUMNS:
+        errors.append(f"{label_path}: label columns must match expected order")
+    return errors
+
+
 def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
     manifest = read_json(manifest_path)
     included_ids = {record["record_id"] for record in manifest["records"] if record["included"]}
@@ -38,17 +57,26 @@ def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
         errors.append("excluded rows without reasons: " + ", ".join(sorted(excluded_without_reason)))
 
     for label_path in label_paths:
-        header, rows = read_csv(label_path)
-        missing = missing_columns(header, LABEL_COLUMNS)
-        if missing:
-            errors.append(f"{label_path}: missing required columns: {', '.join(missing)}")
+        try:
+            header, rows = read_csv(label_path)
+        except ValueError as error:
+            errors.append(str(error))
+            continue
+
+        header_errors = validate_label_header(label_path, header)
+        if header_errors:
+            errors.extend(header_errors)
             continue
 
         for row_number, row in enumerate(rows, start=2):
-            record_id = normalize_space(row.get("record_id", ""))
+            raw_record_id = row.get("record_id", "")
+            record_id = normalize_space(raw_record_id)
             location = f"{label_path}:{row_number}"
             if not record_id:
                 errors.append(f"{location}: record_id is empty")
+                continue
+            if raw_record_id != record_id:
+                errors.append(f"{location}: record_id must not contain surrounding whitespace or repeated whitespace")
                 continue
             if record_id not in included_ids:
                 errors.append(f"{location}: unexpected record_id {record_id}")
