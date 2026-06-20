@@ -21,6 +21,7 @@
 - Create: `skills/community-painpoint-analysis/references/labeling-codebook-guide.md`
 - Create: `skills/community-painpoint-analysis/references/problem-definition-template.md`
 - Create: `scripts/install_skill.py`
+- Create: `tests/__init__.py`
 - Create: `tests/fixtures/community_posts.csv`
 - Create: `tests/fixtures/community_posts_extra.csv`
 - Create: `tests/helpers.py`
@@ -34,6 +35,7 @@ Source-of-truth lives in this repo so changes can be reviewed and committed. The
 ## Task 1: Test Harness And Fixtures
 
 **Files:**
+- Create: `tests/__init__.py`
 - Create: `tests/fixtures/community_posts.csv`
 - Create: `tests/fixtures/community_posts_extra.csv`
 - Create: `tests/helpers.py`
@@ -79,7 +81,12 @@ SCRIPTS_DIR = SKILL_DIR / "scripts"
 FIXTURES_DIR = ROOT / "tests" / "fixtures"
 
 
-def run_script(script_name: str, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def run_script(
+    script_name: str,
+    *args: str,
+    cwd: Path | None = None,
+    timeout: int = 30,
+) -> subprocess.CompletedProcess[str]:
     script_path = SCRIPTS_DIR / script_name
     return subprocess.run(
         [sys.executable, str(script_path), *args],
@@ -87,12 +94,18 @@ def run_script(script_name: str, *args: str, cwd: Path | None = None) -> subproc
         check=False,
         text=True,
         capture_output=True,
+        timeout=timeout,
     )
 
 
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as file:
-        return list(csv.DictReader(file))
+        rows = []
+        for row_number, row in enumerate(csv.DictReader(file), start=2):
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError(f"{path}: malformed CSV row at line {row_number}")
+            rows.append(row)
+        return rows
 
 
 def read_json(path: Path) -> dict:
@@ -108,7 +121,7 @@ Expected: `Ran 0 tests` or no failing tests.
 - [ ] **Step 5: Commit fixtures and helpers**
 
 ```bash
-git add tests/fixtures/community_posts.csv tests/fixtures/community_posts_extra.csv tests/helpers.py
+git add tests/__init__.py tests/fixtures/community_posts.csv tests/fixtures/community_posts_extra.csv tests/helpers.py
 git commit -m "test: add community analysis fixtures"
 ```
 
@@ -129,7 +142,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import FIXTURES_DIR, read_json, run_script
+from tests.helpers import FIXTURES_DIR, read_json, run_script
 
 
 class PrepareDatasetTests(unittest.TestCase):
@@ -611,7 +624,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import FIXTURES_DIR, read_json, run_script
+from tests.helpers import FIXTURES_DIR, read_json, run_script
 
 
 def write_label_csv(path: Path, rows: list[dict[str, str]]) -> None:
@@ -858,7 +871,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import FIXTURES_DIR, read_csv_rows, read_json, run_script
+from tests.helpers import FIXTURES_DIR, read_csv_rows, read_json, run_script
 
 
 def write_labels(path: Path, record_ids: list[str]) -> None:
@@ -1056,7 +1069,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import read_json, run_script
+from tests.helpers import read_json, run_script
 
 
 class SummarizeLabelsTests(unittest.TestCase):
