@@ -66,8 +66,13 @@ def validate_rows(
             severity = row.get("severity", "")
             if severity and severity not in SEVERITY_SCORE:
                 errors.append(f"{labeled_posts}: line {line_number}: unknown severity: {severity}")
+            confidence = row.get("confidence", "")
+            if confidence and confidence not in CONFIDENCE_SCORE:
+                errors.append(f"{labeled_posts}: line {line_number}: unknown confidence: {confidence}")
             relevant_rows.append(row)
         else:
+            if not row.get("irrelevant_reason", "").strip():
+                errors.append(f"{labeled_posts}: line {line_number}: irrelevant_reason is required")
             irrelevant_rows.append(row)
 
     if errors:
@@ -82,7 +87,7 @@ def top_evidence_for_pain(
         evidence_rows,
         key=lambda item: (
             -SEVERITY_SCORE[item[1].get("severity", "")],
-            -CONFIDENCE_SCORE.get(item[1].get("confidence", ""), 0),
+            -CONFIDENCE_SCORE[item[1].get("confidence", "")],
             0 if item[1].get("evidence_quote", "").strip() else 1,
             item[0],
         ),
@@ -108,6 +113,7 @@ def summarize(labeled_posts: Path) -> dict:
     journey_counter: Counter[str] = Counter(row.get("journey_stage", "") for row in relevant_rows)
     sentiment_counter: Counter[str] = Counter(row.get("sentiment", "") for row in relevant_rows)
     severity_counter: Counter[str] = Counter(row.get("severity", "") for row in relevant_rows)
+    confidence_counter: Counter[str] = Counter(row.get("confidence", "") for row in relevant_rows)
     irrelevant_counter: Counter[str] = Counter(row.get("irrelevant_reason", "") for row in irrelevant_rows)
 
     evidence_by_pain: dict[str, list[tuple[int, dict[str, str]]]] = defaultdict(list)
@@ -142,6 +148,7 @@ def summarize(labeled_posts: Path) -> dict:
         "journey_stages": top_counter(journey_counter),
         "sentiment": top_counter(sentiment_counter),
         "severity": top_counter(severity_counter),
+        "confidence": top_counter(confidence_counter),
         "irrelevant_reasons": top_counter(irrelevant_counter),
         "needs_review_record_ids": needs_review_record_ids,
     }

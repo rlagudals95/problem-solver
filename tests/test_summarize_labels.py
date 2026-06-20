@@ -98,6 +98,7 @@ class SummarizeLabelsTests(unittest.TestCase):
             self.assertEqual(summary["irrelevant_rows"], 1)
             self.assertEqual(summary["pain_points"][0]["name"], "가격/혜택 구조 불투명")
             self.assertEqual(summary["pain_points"][0]["evidence_record_ids"], ["rec_a"])
+            self.assertEqual(summary["confidence"][0], {"name": "높음", "count": 1})
 
     def test_summarize_labels_rejects_unexpected_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -156,6 +157,41 @@ class SummarizeLabelsTests(unittest.TestCase):
 
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unknown severity", result.stderr)
+
+    def test_summarize_labels_rejects_unknown_relevant_confidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(labeled, [labeled_row("rec_a", confidence="불명")])
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown confidence", result.stderr)
+
+    def test_summarize_labels_rejects_irrelevant_row_missing_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(
+                labeled,
+                [
+                    labeled_row(
+                        "rec_a",
+                        is_relevant="false",
+                        irrelevant_reason="",
+                        primary_pain_point="",
+                        severity="",
+                        evidence_quote="",
+                        confidence="",
+                    ),
+                ],
+            )
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("irrelevant_reason is required", result.stderr)
 
     def test_summarize_labels_includes_needs_review_record_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -220,6 +256,31 @@ class SummarizeLabelsTests(unittest.TestCase):
             self.assertEqual(
                 summary["pain_points"][0]["evidence_record_ids"],
                 ["rec_high_high", "rec_high_mid", "rec_high_low", "rec_mid_high", "rec_mid_low"],
+            )
+
+    def test_summarize_labels_counts_multiple_pain_points_with_share_ordering(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(
+                labeled,
+                [
+                    labeled_row("rec_price_a", primary_pain_point="가격/혜택 구조 불투명"),
+                    labeled_row("rec_install", primary_pain_point="설치 가능 여부 불안"),
+                    labeled_row("rec_price_b", primary_pain_point="가격/혜택 구조 불투명"),
+                ],
+            )
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            summary = read_json(run_dir / "label_summary.json")
+            self.assertEqual(
+                [(item["name"], item["count"], item["share"]) for item in summary["pain_points"]],
+                [
+                    ("가격/혜택 구조 불투명", 2, 0.6667),
+                    ("설치 가능 여부 불안", 1, 0.3333),
+                ],
             )
 
 
