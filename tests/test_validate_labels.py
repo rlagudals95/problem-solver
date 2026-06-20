@@ -286,6 +286,25 @@ class ValidateLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unknown irrelevant_reason: 기타", result.stderr)
 
+    def test_validate_labels_fails_when_irrelevant_row_has_unknown_schema_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir, included_ids = self.prepare_run(temp_dir)
+            labels = output_dir / "labels" / "chunk-001-labels.csv"
+            rows = [valid_label_row(record_id) for record_id in included_ids]
+            rows[0]["is_relevant"] = "false"
+            rows[0]["irrelevant_reason"] = "generic_chatter"
+            rows[0]["sentiment"] = "화남"
+            rows[0]["severity"] = "심각"
+            rows[0]["confidence"] = "확실"
+            write_label_csv(labels, rows)
+
+            result = run_script("validate_labels.py", str(output_dir / "source_manifest.json"), str(labels))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown sentiment: 화남", result.stderr)
+            self.assertIn("unknown severity: 심각", result.stderr)
+            self.assertIn("unknown confidence: 확실", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

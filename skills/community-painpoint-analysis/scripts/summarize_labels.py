@@ -79,17 +79,18 @@ def validate_rows(
         if needs_review:
             needs_review_record_ids.append(row.get("record_id", ""))
 
+        validate_enum(errors, labeled_posts, line_number, row, "sentiment", SENTIMENT_VALUES)
+        severity = row.get("severity", "")
+        if severity and severity not in SEVERITY_SCORE:
+            errors.append(f"{labeled_posts}: line {line_number}: unknown severity: {severity}")
+        confidence = row.get("confidence", "")
+        if confidence and confidence not in CONFIDENCE_SCORE:
+            errors.append(f"{labeled_posts}: line {line_number}: unknown confidence: {confidence}")
+
         if is_relevant:
             for column in REQUIRED_RELEVANT_COLUMNS:
                 if not row.get(column, "").strip():
                     errors.append(f"{labeled_posts}: line {line_number}: {column} is required")
-            severity = row.get("severity", "")
-            if severity and severity not in SEVERITY_SCORE:
-                errors.append(f"{labeled_posts}: line {line_number}: unknown severity: {severity}")
-            confidence = row.get("confidence", "")
-            if confidence and confidence not in CONFIDENCE_SCORE:
-                errors.append(f"{labeled_posts}: line {line_number}: unknown confidence: {confidence}")
-            validate_enum(errors, labeled_posts, line_number, row, "sentiment", SENTIMENT_VALUES)
             relevant_rows.append(row)
         else:
             if not row.get("irrelevant_reason", "").strip():

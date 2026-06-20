@@ -115,13 +115,13 @@ def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
             needs_review = parse_bool(row.get("needs_review", ""))
             if needs_review is None:
                 errors.append(f"{location}: needs_review must be true or false")
+            validate_enum(errors, location, row, "sentiment", SENTIMENT_VALUES)
+            validate_enum(errors, location, row, "severity", SEVERITY_VALUES)
+            validate_enum(errors, location, row, "confidence", CONFIDENCE_VALUES)
             if is_relevant:
                 for column in RELEVANT_REQUIRED_COLUMNS:
                     if not normalize_space(row.get(column, "")):
                         errors.append(f"{location}: {column} is required for relevant rows")
-                validate_enum(errors, location, row, "sentiment", SENTIMENT_VALUES)
-                validate_enum(errors, location, row, "severity", SEVERITY_VALUES)
-                validate_enum(errors, location, row, "confidence", CONFIDENCE_VALUES)
             elif not normalize_space(row.get("irrelevant_reason", "")):
                 errors.append(f"{location}: irrelevant_reason is required for irrelevant rows")
             else:

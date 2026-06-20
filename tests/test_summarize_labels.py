@@ -228,6 +228,33 @@ class SummarizeLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unknown irrelevant_reason", result.stderr)
 
+    def test_summarize_labels_rejects_unknown_irrelevant_schema_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            labeled = run_dir / "labeled_posts.csv"
+            write_labeled_csv(
+                labeled,
+                [
+                    labeled_row(
+                        "rec_a",
+                        is_relevant="false",
+                        irrelevant_reason="generic_chatter",
+                        primary_pain_point="",
+                        sentiment="화남",
+                        severity="심각",
+                        evidence_quote="",
+                        confidence="확실",
+                    ),
+                ],
+            )
+
+            result = run_script("summarize_labels.py", str(labeled), str(run_dir / "label_summary.json"))
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unknown sentiment", result.stderr)
+            self.assertIn("unknown severity", result.stderr)
+            self.assertIn("unknown confidence", result.stderr)
+
     def test_summarize_labels_includes_needs_review_record_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             run_dir = Path(temp_dir)
