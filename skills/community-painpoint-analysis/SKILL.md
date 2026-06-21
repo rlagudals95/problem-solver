@@ -1,11 +1,11 @@
 ---
 name: community-painpoint-analysis
-description: Use when analyzing large community-analyzer CSV exports to identify user pain points, label posts, prevent row omissions, synthesize JTBD problem definitions, and produce evidence-backed research outputs.
+description: Use when analyzing large community-analyzer CSV exports to identify user pain points, prevent row omissions, synthesize JTBD problem definitions, and judge evidence readiness before PRD writing.
 ---
 
 # Community Painpoint Analysis
 
-Use this skill to convert one or more `community-analyzer` CSV exports into a traceable problem-definition package.
+Use this skill to convert one or more `community-analyzer` CSV exports into a traceable pre-PRD product discovery package.
 
 ## Language Rule
 
@@ -22,10 +22,11 @@ The pipeline preserves row-level traceability from raw CSV to final Markdown:
 5. `merge_labels.py` joins labels back to source metadata in manifest order.
 6. `summarize_labels.py` computes aggregate pain point evidence from merged row-level labels.
 7. `render_problem_definition.py` renders `problem-definition.md` from the manifest, merged labels, summary, audit report, and codebook.
+8. Pre-PRD renderers turn the validated problem evidence into `opportunity-brief.md`, `product-direction.md`, `validation-plan.md`, and `prd-readiness.md`.
 
 ## Core Rule
 
-Do not write the final `problem-definition.md` until script validation proves every source row is either labeled exactly once or explicitly excluded in `source_manifest.json`.
+Do not write final synthesis until script validation proves every source row is either labeled exactly once or explicitly excluded in `source_manifest.json`. Do not write a PRD until `prd-readiness.md` says the evidence is ready.
 
 ## Required Inputs
 
@@ -112,6 +113,50 @@ python3 "$SKILL_DIR/scripts/render_problem_definition.py" \
 
 The final reviewed `problem-definition.md` should remain Korean-first.
 
+12. Render the opportunity brief:
+
+```bash
+python3 "$SKILL_DIR/scripts/render_opportunity_brief.py" \
+  analysis-runs/YYYY-MM-DD-topic/source_manifest.json \
+  analysis-runs/YYYY-MM-DD-topic/labeled_posts.csv \
+  analysis-runs/YYYY-MM-DD-topic/label_summary.json \
+  analysis-runs/YYYY-MM-DD-topic/problem-definition.md \
+  analysis-runs/YYYY-MM-DD-topic/opportunity-brief.md
+```
+
+13. Render the product direction:
+
+```bash
+python3 "$SKILL_DIR/scripts/render_product_direction.py" \
+  analysis-runs/YYYY-MM-DD-topic/label_summary.json \
+  analysis-runs/YYYY-MM-DD-topic/opportunity-brief.md \
+  analysis-runs/YYYY-MM-DD-topic/product-direction.md
+```
+
+14. Render the validation plan:
+
+```bash
+python3 "$SKILL_DIR/scripts/render_validation_plan.py" \
+  analysis-runs/YYYY-MM-DD-topic/label_summary.json \
+  analysis-runs/YYYY-MM-DD-topic/product-direction.md \
+  analysis-runs/YYYY-MM-DD-topic/validation-plan.md
+```
+
+15. Render the PRD readiness decision:
+
+```bash
+python3 "$SKILL_DIR/scripts/render_prd_readiness.py" \
+  analysis-runs/YYYY-MM-DD-topic/source_manifest.json \
+  analysis-runs/YYYY-MM-DD-topic/label_summary.json \
+  analysis-runs/YYYY-MM-DD-topic/problem-definition.md \
+  analysis-runs/YYYY-MM-DD-topic/opportunity-brief.md \
+  analysis-runs/YYYY-MM-DD-topic/product-direction.md \
+  analysis-runs/YYYY-MM-DD-topic/validation-plan.md \
+  analysis-runs/YYYY-MM-DD-topic/prd-readiness.md
+```
+
+16. Review `prd-readiness.md` before creating any PRD. If it says `PRD 작성 보류`, execute `validation-plan.md` first and treat the current output as discovery direction, not implementation scope.
+
 ## Quality Gates
 
 - `source_manifest.json` exists.
@@ -121,8 +166,13 @@ The final reviewed `problem-definition.md` should remain Korean-first.
 - `labeled_posts.csv` exists and contains one row per included `record_id`.
 - `label_summary.json` exists.
 - `problem-definition.md` exists and cites source evidence.
+- `opportunity-brief.md` exists and connects user pain to a business opportunity without inventing market size.
+- `product-direction.md` exists and states product bets, solution principles, and non-goals before feature details.
+- `validation-plan.md` exists and defines risky assumptions, interview questions, experiments, success criteria, and stop criteria.
+- `prd-readiness.md` exists and explicitly says whether PRD writing is ready or should be deferred.
 - Every major claim in `problem-definition.md` cites representative `record_id` values.
 - Risks and counter-evidence are included.
+- PRD writing does not begin while `prd-readiness.md` says `PRD 작성 보류`.
 
 ## Judgment Rules
 
@@ -132,3 +182,5 @@ The final reviewed `problem-definition.md` should remain Korean-first.
 - Use `needs_review=true` for ambiguous rows.
 - Do not infer market size, revenue, or willingness to pay without evidence.
 - Avoid jumping from pain point to feature before stating the problem clearly.
+- Product direction is not a PRD or feature spec. Stop at opportunity, strategy hypothesis, solution principles, and validation plan.
+- Before user behavior validation exists, default to `PRD 작성 보류` rather than pretending community evidence alone is enough.
