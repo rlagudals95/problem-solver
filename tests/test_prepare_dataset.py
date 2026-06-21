@@ -173,9 +173,9 @@ class PrepareDatasetTests(unittest.TestCase):
             self.assertTrue(all(record["chunk_file"] == "" for record in excluded_records))
             self.assertTrue(all(record["chunk_index"] is None for record in excluded_records))
             audit = (output_dir / "audit-report.md").read_text(encoding="utf-8")
-            self.assertIn("Source rows: 5", audit)
-            self.assertIn("Included rows: 3", audit)
-            self.assertIn("Excluded rows: 2", audit)
+            self.assertIn("원본 행 수: 5", audit)
+            self.assertIn("분석 포함 행 수: 3", audit)
+            self.assertIn("제외 행 수: 2", audit)
 
     def test_prepare_dataset_keeps_title_only_ok_rows(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

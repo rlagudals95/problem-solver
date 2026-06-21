@@ -1,39 +1,39 @@
-# Problem Definition Template
+# 문제 정의 템플릿
 
-Use this structure for `problem-definition.md`.
+`problem-definition.md`는 기본적으로 한국어로 작성한다. 원문 인용이나 고유명사를 제외하고 제목, 설명, 판단, 다음 액션은 한국어를 사용한다.
 
-## 1. Executive Summary
+## 1. 핵심 요약
 
-State the strongest problem, target segment, and why it matters. Keep this concise and cite representative `record_id` values.
+가장 강한 문제, 타겟 세그먼트, 중요한 이유를 간결하게 쓴다. 대표 `record_id`를 함께 인용한다.
 
-## 2. Dataset Coverage
+## 2. 데이터 커버리지
 
-Include source row count, included row count, excluded row count, chunk count, validation result, and notable audit warnings.
+원본 행 수, 분석 포함 행 수, 제외 행 수, 청크 수, 검증 결과, 주요 audit 경고를 포함한다.
 
-## 3. Top Pain Points
+## 3. 주요 페인포인트
 
-For each top pain point include count, share of relevant rows, severity signal, representative quotes, and `record_id` references.
+각 페인포인트별 건수, 유효 분석 글 내 비중, 심각도 신호, 대표 근거, `record_id`를 포함한다.
 
-## 4. Target Segments
+## 4. 타겟 세그먼트
 
-Name repeated user types and explain what evidence separates them.
+반복적으로 등장하는 사용자 유형을 이름 붙이고, 어떤 근거가 세그먼트를 구분하는지 설명한다.
 
-## 5. JTBD Problem Statements
+## 5. JTBD 문제 진술
 
-Write problem statements in `When ..., I want ..., so I can ...` format.
+`...할 때, ...하고 싶다. 그래야 ...할 수 있다.` 형식의 한국어 JTBD로 쓴다.
 
-## 6. Opportunity Prioritization
+## 6. 기회 우선순위
 
-Prioritize problems using evidence strength, pain severity, frequency, business relevance, and feasibility to investigate.
+근거 강도, 고통의 심각도, 빈도, 비즈니스 관련성, 추가 검증 가능성을 기준으로 우선순위를 정한다.
 
-## 7. Recommended Problem Definition
+## 7. 추천 문제 정의
 
-Choose the first problem to investigate. Explain why this problem is stronger than the alternatives.
+가장 먼저 검증할 문제를 하나 선택하고, 왜 다른 문제보다 우선인지 설명한다.
 
-## 8. Risks And Counter-Evidence
+## 8. 리스크와 반대 근거
 
-List weak evidence, conflicting signals, overrepresentation risks, and rows marked `needs_review=true`.
+약한 근거, 충돌 신호, 특정 커뮤니티 과대표집 위험, `needs_review=true` row를 정리한다.
 
-## 9. Next Validation Questions
+## 9. 다음 검증 질문
 
-List interview questions, landing-page tests, manual concierge tests, or MVP experiments that would validate the problem before solution design.
+솔루션 설계 전에 문제를 검증할 인터뷰 질문, 랜딩페이지 테스트, 수동 컨시어지 테스트, MVP 실험을 제안한다.

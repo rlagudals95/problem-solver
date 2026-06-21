@@ -36,15 +36,15 @@ def audit_markdown(manifest: dict) -> str:
     summary = manifest["summary"]
     return "\n".join(
         [
-            "# Audit Report",
+            "# 감사 리포트",
             "",
-            "## Dataset Preparation",
+            "## 데이터 준비",
             "",
-            f"- Topic: {manifest['topic']}",
-            f"- Source rows: {summary['source_rows']}",
-            f"- Included rows: {summary['included_rows']}",
-            f"- Excluded rows: {summary['excluded_rows']}",
-            f"- Chunks: {summary['chunks']}",
+            f"- 주제: {manifest['topic']}",
+            f"- 원본 행 수: {summary['source_rows']}",
+            f"- 분석 포함 행 수: {summary['included_rows']}",
+            f"- 제외 행 수: {summary['excluded_rows']}",
+            f"- 청크 수: {summary['chunks']}",
             "",
         ]
     )

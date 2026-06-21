@@ -136,12 +136,12 @@ def validate(manifest_path: Path, label_paths: list[Path]) -> list[str]:
 
 def append_audit(manifest_path: Path, passed: bool, errors: list[str]) -> None:
     audit_path = manifest_path.parent / "audit-report.md"
-    existing = audit_path.read_text(encoding="utf-8") if audit_path.exists() else "# Audit Report\n"
-    lines = [existing.rstrip(), "", "## Label Validation", ""]
+    existing = audit_path.read_text(encoding="utf-8") if audit_path.exists() else "# 감사 리포트\n"
+    lines = [existing.rstrip(), "", "## 라벨 검증", ""]
     if passed:
-        lines.append("- Result: coverage passed")
+        lines.append("- 결과: coverage passed")
     else:
-        lines.append("- Result: coverage failed")
+        lines.append("- 결과: coverage failed")
         for error in errors:
             lines.append(f"- {error}")
     audit_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

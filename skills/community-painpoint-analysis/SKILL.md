@@ -7,6 +7,10 @@ description: Use when analyzing large community-analyzer CSV exports to identify
 
 Use this skill to convert one or more `community-analyzer` CSV exports into a traceable problem-definition package.
 
+## Language Rule
+
+Write analysis outputs in Korean by default. Use English only for field names, commands, source quotes, URLs, and unavoidable product terms. Write JTBD in Korean using this shape: `...할 때, ...하고 싶다. 그래야 ...할 수 있다.`
+
 ## How It Works
 
 The pipeline preserves row-level traceability from raw CSV to final Markdown:
@@ -52,6 +56,8 @@ python3 "$SKILL_DIR/scripts/prepare_dataset.py" \
 2. Read `source_manifest.json` and inspect `audit-report.md`.
 
 3. Calibrate `codebook.md` from a representative sample of 30-50 rows. Read `references/labeling-codebook-guide.md` before writing the codebook.
+
+   Write codebook categories, inclusion rules, and examples in Korean unless preserving a source quote.
 
 4. Label every chunk in `chunks/`. Save one label CSV per chunk in `labels/` using exactly these columns:
 
@@ -103,6 +109,8 @@ python3 "$SKILL_DIR/scripts/render_problem_definition.py" \
 ```
 
 11. Read `references/problem-definition-template.md` and review `problem-definition.md`. You may improve clarity and product judgment, but do not remove coverage numbers, `record_id` evidence, risks, or counter-evidence.
+
+The final reviewed `problem-definition.md` should remain Korean-first.
 
 ## Quality Gates
 

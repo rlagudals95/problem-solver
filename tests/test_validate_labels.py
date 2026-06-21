@@ -115,7 +115,7 @@ class ValidateLabelsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("malformed CSV", result.stderr)
             audit = (output_dir / "audit-report.md").read_text(encoding="utf-8")
-            self.assertIn("- Result: coverage failed", audit)
+            self.assertIn("- 결과: coverage failed", audit)
             self.assertIn("malformed CSV", audit)
 
     def test_validate_labels_fails_when_required_label_column_is_missing(self) -> None:

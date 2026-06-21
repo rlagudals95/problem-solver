@@ -34,7 +34,7 @@ def label_row(record: dict, **overrides: str) -> dict[str, str]:
         "irrelevant_reason": "",
         "user_context": "정수기 렌탈을 검토하는 가정 사용자",
         "journey_stage": "비교/검토",
-        "jtbd": "When comparing rental options, I want clear total cost and conditions, so I can choose without regret.",
+        "jtbd": "정수기 렌탈 옵션을 비교할 때, 실제 총비용과 조건을 명확히 알고 싶다. 그래야 후회 없이 선택할 수 있다.",
         "primary_pain_point": "렌탈 조건 비교 어려움",
         "secondary_pain_point": "",
         "sentiment": "부정",
@@ -76,7 +76,7 @@ def write_labels_from_manifest(run_dir: Path) -> Path:
             rows.append(
                 label_row(
                     record,
-                    jtbd="When scheduling maintenance visits, I want narrower visit windows, so I do not lose work time.",
+                    jtbd="관리 방문 일정을 잡을 때, 더 좁은 방문 시간대를 알고 싶다. 그래야 근무 시간을 잃지 않을 수 있다.",
                     primary_pain_point="관리 일정 조율 어려움",
                     secondary_pain_point="방문 시간 불확실성",
                     severity="높음",
@@ -148,16 +148,16 @@ class RenderProblemDefinitionTests(unittest.TestCase):
 
             self.assertEqual(render.returncode, 0, render.stderr)
             problem_definition = (run_dir / "problem-definition.md").read_text(encoding="utf-8")
-            self.assertIn("# Problem Definition", problem_definition)
-            self.assertIn("Source rows: 6", problem_definition)
-            self.assertIn("Included rows: 4", problem_definition)
-            self.assertIn("Excluded rows: 2", problem_definition)
-            self.assertIn("Validation result: coverage passed", problem_definition)
+            self.assertIn("# 문제 정의", problem_definition)
+            self.assertIn("원본 행 수: 6", problem_definition)
+            self.assertIn("분석 포함 행 수: 4", problem_definition)
+            self.assertIn("제외 행 수: 2", problem_definition)
+            self.assertIn("검증 결과: coverage passed", problem_definition)
             self.assertIn("렌탈 조건 비교 어려움", problem_definition)
             self.assertIn("관리 일정 조율 어려움", problem_definition)
             self.assertIn("record_id", problem_definition)
-            self.assertIn("## 7. Recommended Problem Definition", problem_definition)
-            self.assertIn("## 9. Next Validation Questions", problem_definition)
+            self.assertIn("## 7. 추천 문제 정의", problem_definition)
+            self.assertIn("## 9. 다음 검증 질문", problem_definition)
 
 
 if __name__ == "__main__":
