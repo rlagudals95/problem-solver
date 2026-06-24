@@ -28,6 +28,16 @@ class CommonHelperTests(unittest.TestCase):
             ):
                 read_csv(csv_path)
 
+    def test_read_csv_accepts_large_text_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_path = Path(temp_dir) / "large.csv"
+            large_body = "고양이 병원 후기 " * 25000
+            csv_path.write_text(f"site,body_text\ncafe,{large_body}\n", encoding="utf-8")
+
+            _, rows = read_csv(csv_path)
+
+            self.assertEqual(rows[0]["body_text"], large_body)
+
     def test_stable_key_fallback_includes_source_path(self) -> None:
         row: dict[str, str] = {}
 

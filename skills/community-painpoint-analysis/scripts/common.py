@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Iterable
 
@@ -81,6 +82,19 @@ MERGED_COLUMNS = [
 ]
 
 TEXT_COLUMNS = ["title", "search_excerpt", "body_text", "comments_text"]
+
+
+def raise_csv_field_size_limit() -> None:
+    limit = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(limit)
+            return
+        except OverflowError:
+            limit //= 10
+
+
+raise_csv_field_size_limit()
 
 
 def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
